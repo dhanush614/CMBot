@@ -110,14 +110,11 @@
 	});	
 
 	app.post('/api/documentSearch', (req, res) => {
-				console.log(req);
 				var claimNumber = req.body.claimNumber;
-				console.log("http://localhost:8080/search?claimNumber=" + claimNumber);
 				request.get({
 					url: "http://localhost:8080/search?claimNumber=" + claimNumber
 				}, function(error, response, body) {
 					if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
-						console.log("Body is", body);
 						res.send(body);
 					} else {
 						console.log("Error is", error);
