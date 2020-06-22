@@ -17,6 +17,7 @@
 	'use strict';
 
 	var express = require('express'); // app server
+	var cookieParser = require('cookie-parser');//Cookies
 	var bodyParser = require('body-parser'); // parser for post requests
 	var AssistantV2 = require('ibm-watson/assistant/v2'); // watson sdk
 
@@ -25,9 +26,11 @@
 	const multer = require('multer');
 	const fs = require('fs');
 	var cors = require('cors');
+	
 	var app = express();
 	//require('./public/js/conversation.js')(app,multer,request,path,fs);
-
+    //Cookies
+	app.use(cookieParser());
 	const {
 	    IamAuthenticator,
 	    BearerTokenAuthenticator
@@ -44,7 +47,24 @@
 	app.use(cors());
 	app.use(function(req, res, next) {
 	    res.header('Access-Control-Allow-Origin', 'http://10.10.1.40:3000'); // update to match the domain you will make the request from
-	    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+		res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+			var cookie = req.cookies.authheader;
+   var cookie = req.cookies.authToken;
+	if (cookie === undefined) {
+
+	 // no: set a new cookie
+
+	 res.cookie('authToken','Basic ZGFkbWluOmRhZG1pbg==');
+
+	 console.log('cookie created successfully');
+
+	} else {
+
+	 // yes, cookie was already present 
+
+	 console.log('cookie exists', cookie);
+
+	}
 	    next();
 	});
 
@@ -90,7 +110,8 @@
 	                method: "POST",
 					url: "http://localhost:8080/upload",
 	                headers: {
-	                    "Content-Type": "multipart/form-data"
+						"Content-Type": "multipart/form-data",
+						'Authorization': req.cookies.authToken
 	                },
 	                formData: {
 						"uploadFile": fs.createReadStream(filep),
@@ -112,7 +133,10 @@
 	app.post('/api/documentSearch', (req, res) => {
 				var claimNumber = req.body.claimNumber;
 				request.get({
-					url: "http://localhost:8080/search?claimNumber=" + claimNumber
+					url: "http://localhost:8080/search?claimNumber=" + claimNumber,
+					headers:{
+					'Authorization': req.cookies.authToken
+					}
 				}, function(error, response, body) {
 					if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
 						res.send(body);
@@ -130,7 +154,10 @@
 	    var claimNumber = req.body.claimNumber;
 	    console.log("http://localhost:8080/validate?claimNumber=" + claimNumber);
 	    request.get({
-	        url: "http://localhost:8080/validate?claimNumber=" + claimNumber
+			url: "http://localhost:8080/validate?claimNumber=" + claimNumber,
+			headers:{
+				'Authorization': req.cookies.authToken
+			}
 	    }, function(error, response, body) {
 	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
 	            console.log("Body is", body);
@@ -147,7 +174,10 @@
 	    var claimNumber = req.body.claimNumber;
 	    console.log("http://localhost:8080/create?claimNumber=" + claimNumber);
 	    request.get({
-	        url: "http://localhost:8080/create?claimNumber=" + claimNumber
+			url: "http://localhost:8080/create?claimNumber=" + claimNumber,
+			headers:{
+				'Authorization': req.cookies.authToken
+			}
 	    }, function(error, response, body) {
 
 	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {

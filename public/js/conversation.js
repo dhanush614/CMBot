@@ -3,6 +3,7 @@
 /* eslint no-unused-vars: "off" */
 /* global Api: true, Common: true*/
 var chatBoxElement=null;
+var _claimNumber=null;
 var ConversationPanel = (function() {
     var settings = {
         selectors: {
