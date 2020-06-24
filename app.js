@@ -20,12 +20,17 @@
 	var cookieParser = require('cookie-parser');//Cookies
 	var bodyParser = require('body-parser'); // parser for post requests
 	var AssistantV2 = require('ibm-watson/assistant/v2'); // watson sdk
+	
 
 	var request = require('request');
 	const path = require('path');
 	const multer = require('multer');
 	const fs = require('fs');
+	const url = require('url');
+	const querystring = require('querystring');
+	const propertiesReader = require('properties-reader');
 	var cors = require('cors');
+	var token="";
 	
 	var app = express();
 	//require('./public/js/conversation.js')(app,multer,request,path,fs);
@@ -36,44 +41,59 @@
 	    BearerTokenAuthenticator
 	} = require('ibm-watson/auth');
 
+	app.all('/', function (req, res, next) {
+	  console.log('Accessing the secret section ...',req.query.authHeader);
+	  token=req.query.authHeader;
+	  var properties = propertiesReader('C:/PropertyFiles/sample.properties');
+	  var property = properties.get('demo.demo.tos');
+	  console.log(property,"kjkjljdgfc");
+	  res.cookie('authToken',token);
+	  next() // pass control to the next handler
 
+	})
+	
 	require('./health/health')(app);
-
 	//Bootstrap application settings
 	app.use(express.static('./public')); // load UI from public folder
 	app.use(bodyParser.json());
 
 	//added by Anuram
 	app.use(cors());
+	//console.log('authHeader');
+
 	app.use(function(req, res, next) {
 	    res.header('Access-Control-Allow-Origin', 'http://10.10.1.40:3000'); // update to match the domain you will make the request from
 		res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-			var cookie = req.cookies.authheader;
-   var cookie = req.cookies.authToken;
+		var cookie = req.cookies.authheader;
+   		var cookie = req.cookies.authToken;
+
+  //console.log(":::",url.URL.name);
 	if (cookie === undefined) {
 
 	 // no: set a new cookie
+	  //const queryObject = req.query.authheader;
+	  //console.log(queryObject+"sdlfddfl");
 
-	 res.cookie('authToken','Basic ZGFkbWluOmRhZG1pbg==');
+	//  console.log(queryObject);
 
-	 console.log('cookie created successfully');
+	// res.cookie('authToken',token);
+
+//	 console.log('cookie created successfully');
 
 	} else {
 
 	 // yes, cookie was already present 
+	 	const url = require('url');
+		const current_url = new URL('http://localhost:3001/?authHeader=Basic:NzYxMTA0OkFiY0AxMjM0');
+		const search_params = current_url.searchParams;
+		const authHeader = search_params.get('authHeader');
+		var fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+	  	//console.log(authHeader+"sdlfddfl"+fullUrl);
 
-	 console.log('cookie exists', cookie);
+	 	//console.log('cookie exists', cookie);
 
 	}
 	    next();
-	});
-
-	app.get('/', function(req, res) {
-	    // Handle the get for this route
-	});
-
-	app.post('/', function(req, res) {
-	    // Handle the post for this route
 	});
 
 	// till here added by anuram

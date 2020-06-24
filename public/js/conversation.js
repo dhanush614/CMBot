@@ -184,7 +184,20 @@ var ConversationPanel = (function() {
                         if ((http.readyState === XMLHttpRequest.DONE || http.readyState === XMLHttpRequest.HEADERS_RECEIVED) && (http.status === 200 || http.status === 201) && http.response) {
                             //console.log("conversation is",http.response);
                             flag = true;
-                            sendMessage(http.response.CaseFolderId);
+                            //console.log(http.response);
+                            console.log(http.responseText);
+                            if(!http.responseText.includes('Error from service')){
+                                sendMessage(http.response.CaseFolderId);
+                            }
+                            let errmsg = http.responseText.split(':')[1];
+                            Api.setErrorPayload({
+                                'output': {
+                                    'generic': [{
+                                        'response_type': 'text',
+                                        'text': errmsg
+                                    }],
+                                }
+                            });
                         } else if (http.readyState === XMLHttpRequest.DONE && http.status !== 200 && http.status !== 201) {
                             Api.setErrorPayload({
                                 'output': {
