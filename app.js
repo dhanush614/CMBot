@@ -30,6 +30,8 @@
 	const querystring = require('querystring');
 	const propertiesReader = require('properties-reader');
 	var cors = require('cors');
+	const ejs = require('ejs');
+	const cryptoRandomString = require('crypto-random-string');
 	var token="";
 	
 	var app = express();
@@ -44,19 +46,30 @@
 	app.all('/', function (req, res, next) {
 	  console.log('Accessing the secret section ...',req.query.authHeader);
 	  token=req.query.authHeader;
-	  var properties = propertiesReader('C:/PropertyFiles/sample.properties');
-	  var property = properties.get('demo.demo.tos');
-	  console.log(property,"kjkjljdgfc");
 	  res.cookie('authToken',token);
+	  console.log(token);
+	  const enstr = cryptoRandomString({length: 10, type: 'url-safe'});
+	  console.log(enstr);
+	  res.cookie(token,enstr);   
+	  console.log('cookies -->',req.cookies);
+	  console.log('authToken -->',req.cookies.authToken);
+	
+	  
+	//   const cookies = req.cookies;
+	//   const tokenTest = cookies.authToken;
+	//   console.log('1',cookies.authToken);
+	//   //console.log('2',cookiestokenTest);
+	//   console.log('test cookie-->',req.cookies);
 	  next() // pass control to the next handler
 
 	})
 	
 	require('./health/health')(app);
 	//Bootstrap application settings
-	app.use(express.static('./public')); // load UI from public folder
+	app.use(bodyParser.urlencoded({ extended: true }));
+    app.use(express.static(path.join(__dirname + '/public')));
 	app.use(bodyParser.json());
-
+	app.set('view engine', 'ejs');
 	//added by Anuram
 	app.use(cors());
 	//console.log('authHeader');
@@ -83,14 +96,14 @@
 	} else {
 
 	 // yes, cookie was already present 
-	 	const url = require('url');
-		const current_url = new URL('http://localhost:3001/?authHeader=Basic:NzYxMTA0OkFiY0AxMjM0');
-		const search_params = current_url.searchParams;
-		const authHeader = search_params.get('authHeader');
-		var fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+	 	// const url = require('url');
+		// const current_url = new URL('http://localhost:3001/?authHeader=Basic:NzYxMTA0OkFiY0AxMjM0');
+		// const search_params = current_url.searchParams;
+		// const authHeader = search_params.get('authHeader');
+		// var fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
 	  	//console.log(authHeader+"sdlfddfl"+fullUrl);
 
-	 	//console.log('cookie exists', cookie);
+	 	console.log('cookie exists', cookie);
 
 	}
 	    next();
@@ -102,8 +115,11 @@
 	//added by anuram
 
 	//added by ayyan
+	app.get('/',(req,res)=> {
+		res.render('index');
+	});
 	const storage = multer.diskStorage({
-	    destination: './public/uploads/',
+	    destination: process.env.MULTER_DESTINATION,
 	    filename: function(req, file, cb) {
 	        cb(null, file.originalname);
 	    }
@@ -128,7 +144,7 @@
 				var claimNumber = JSON.parse(req.body.claimNumber);
 	            const options = {
 	                method: "POST",
-					url: "http://localhost:8080/upload",
+					url: process.env.FILE_UPLOAD_API,
 	                headers: {
 						"Content-Type": "multipart/form-data",
 						'Authorization': req.cookies.authToken
@@ -153,7 +169,7 @@
 	app.post('/api/documentSearch', (req, res) => {
 				var claimNumber = req.body.claimNumber;
 				request.get({
-					url: "http://localhost:8080/search?claimNumber=" + claimNumber,
+					url: process.env.DOCUMENT_SEARCH_API + claimNumber,
 					headers:{
 					'Authorization': req.cookies.authToken
 					}
@@ -166,15 +182,69 @@
 					}
 	    		});
 	});
+
+	
 	//});
 	//added by ayyan
+	//app.get()
+	var caseData='';
+	
+	app.post('/api/caseSearch', (req, res) => {
+				var claimNumber = req.body.claimNumber;
+				
+				console.log('claimnumber',claimNumber);
+				request.get({
+					url: 'http://localhost:8080/caseSearch?claimNumber='+claimNumber,
+					headers:{
+					'Authorization': req.cookies.authToken
+					}
+				}, function(error, response, body) {
+					if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
+						caseData = JSON.parse(body);
+						console.log(caseData);
+						let tokenUpdated=token.replace('==','');
+	  					let encryptedStr = req.cookies[tokenUpdated];
+						res.send(encryptedStr);
+					} else {
+						console.log("Error is", error);
+						res.status(401).send(error);
+					}
+	    		});
+	});
+	var verifyToken = function (req, res, next) {
+		var tokenStr = req.cookies.authToken;
+		var urlToken = req.query.token;
+		if(tokenStr==undefined || urlToken==undefined){
+			console.log('inside error 1');
+			res.status(401).send('Your dont have permissions to access this page');
+		}else if(tokenStr==null || urlToken==null){
+			console.log('inside error 2');
+			res.status(401).send('Your dont have permissions to access this page');
+		}else{
+			var tokenUpdated=tokenStr.replace('==','');		
+			var encryptedStr = req.cookies[tokenUpdated];
+			console.log(urlToken+'   '+encryptedStr+'  '+tokenStr+'  '+tokenUpdated);
+			if(encryptedStr.trim()!=urlToken.trim())
+				{	
+					console.log('inside error');
+					res.status(401).send('Your dont have permissions to access this page');
+				}
+				else{
+					next();
+				}
+		}  		
+	}
 
+	app.get('/search',verifyToken,(req,res)=>{
+		res.render('Search',{'search':caseData,'symbolicName':['CmAcmCaseIdentifier','DateCreated','CmAcmCaseState','Creator','DateLastModified','LastModifier'],'columnHeader':['Case Id','Created Date','Status','Created By','Last Modified Date','Last Modified By']});
+	});
+	
 	app.post('/api/validateclaim', function(req, res) {
 	    console.log(req);
 	    var claimNumber = req.body.claimNumber;
-	    console.log("http://localhost:8080/validate?claimNumber=" + claimNumber);
+	    console.log(process.env.VALIDATE_CLAIM_API + claimNumber);
 	    request.get({
-			url: "http://localhost:8080/validate?claimNumber=" + claimNumber,
+			url: process.env.VALIDATE_CLAIM_API + claimNumber,
 			headers:{
 				'Authorization': req.cookies.authToken
 			}
@@ -184,7 +254,8 @@
 	            res.send(body);
 	        } else {
 	            console.log("Error is", error);
-	            res.send(error);	        }
+				res.status(400).json(error);	        
+			}
 
 	    });
 	});
@@ -192,9 +263,9 @@
 	app.post('/api/claimnumber', function(req, res) {
 	    console.log(req);
 	    var claimNumber = req.body.claimNumber;
-	    console.log("http://localhost:8080/create?claimNumber=" + claimNumber);
+	    console.log(process.env.CREATE_CLAIM_API + claimNumber);
 	    request.get({
-			url: "http://localhost:8080/create?claimNumber=" + claimNumber,
+			url: process.env.CREATE_CLAIM_API + claimNumber,
 			headers:{
 				'Authorization': req.cookies.authToken
 			}
@@ -205,7 +276,7 @@
 	            res.send(body);
 	        } else {
 	            console.log("Error is", error);
-	            res.send(error);
+	            res.status(400).json(error);
 	        }
 
 	    });
@@ -213,14 +284,14 @@
 
 	app.post('/api/createCase', function(req, res) {
 
-	    var username = 'dadmin';
-	    var password = 'dadmin';
+	    var username = process.env.CASEMANAGER_USERNAME;
+	    var password = process.env.CASEMANAGER_PASSWORD;
 	    var options = {
-	        url: 'https://ibmbaw:9443/CaseManager/CASEREST/v1/cases',
+	        url: process.env.IBM_CREATE_CASE_API,
 	        headers: {
 	            'Content-type': 'application/json',
 	            'Access-Control-Allow-Credential': 'true',
-	            'Authorization': 'Basic ZGFkbWluOmRhZG1pbg=='
+	            'Authorization': req.cookies.authToken
 	        },
 	        auth: {
 	            user: username,
@@ -233,7 +304,7 @@
 	        if (response.statusCode == 200 || response.statusCode == 201) {
 	            res.send(body);
 	        } else {
-	            res.send(error);
+	            res.status(401).send(error);
 	        }
 
 	    });
@@ -255,7 +326,7 @@
 	}
 
 	var assistant = new AssistantV2({
-	    version: '2019-02-28',
+	    version: process.env.WATSON_VERSION,
 	    authenticator: authenticator,
 	    url: process.env.ASSISTANT_URL,
 	    disableSslVerification: process.env.DISABLE_SSL_VERIFICATION === 'true' ? true : false

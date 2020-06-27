@@ -73,7 +73,7 @@ var Api = (function() {
             'generic': [
               {
                 'response_type': 'text',
-                'text': 'I\'m having trouble connecting to the server, please refresh the page'
+                'text': 'Your session has been time out, please refresh the page'
               }
             ],
           }

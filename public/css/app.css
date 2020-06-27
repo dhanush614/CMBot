@@ -36,6 +36,18 @@ div {
 .SearchList{
   	list-style-type: none;
 }
+.caseSearch p{
+	color: #f7ec08;
+    font-style: italic;
+	padding-bottom: 1%;
+    font-weight: initial;
+    font-size: 40%;
+}
+.caseSearch p:hover{
+	cursor: pointer;
+	text-decoration: underline;
+	color:#fff;
+}
 .documentLi{
 	color: #f7ec08;
     font-style: italic;

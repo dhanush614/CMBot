@@ -1,4 +1,12 @@
-
+.bg { 
+    background-image: url('./../img/backgroud-img.jpg');    
+    height: 100%;
+    background-position: center center;
+    background-attachment: fixed;
+    background-color: #464646;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
 
 /* Custom Scrollbar using CSS */
 .custom-scrollbar-css {
