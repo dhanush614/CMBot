@@ -3,8 +3,8 @@
     /* eslint no-unused-vars: "off" */
     /* global Api: true, Common: true*/
     var chatBoxElement = null;
-    var _claimNumber = null;
-    //const propertiesReader = require('properties-reader');
+    var claimNumber = null;
+    var docId=null;
     var ConversationPanel = (function() {
         var settings = {
             selectors: {
@@ -172,10 +172,8 @@
                     }
                 }
             } else {
-                //added by Anuram
                 if (responses.length != 0) {
                     if (responses[0].innerhtml == "Please wait your case is being created") {
-                        //var url='/api/claimnumber';
                         var url = '/api/createCase';
                         var http = new XMLHttpRequest();
                         http.open('POST', url, true);
@@ -183,22 +181,8 @@
                         http.responseType = 'json';
                         http.onreadystatechange = function() {
                             if ((http.readyState === XMLHttpRequest.DONE || http.readyState === XMLHttpRequest.HEADERS_RECEIVED) && (http.status === 200 || http.status === 201) && http.response) {
-                                //console.log("conversation is",http.response);
-                                flag = true;
-                                //console.log(http.response);
-                                console.log(http.responseText);
-                                if (!http.responseText.includes('Error from service')) {
-                                    sendMessage(http.response.CaseFolderId);
-                                }
-                                let errmsg = http.responseText.split(':')[1];
-                                Api.setErrorPayload({
-                                    'output': {
-                                        'generic': [{
-                                            'response_type': 'text',
-                                            'text': errmsg
-                                        }],
-                                    }
-                                });
+                                flag = true;                               
+                                sendMessage(http.response.CaseFolderId);                                
                             } else if (http.readyState === XMLHttpRequest.DONE && http.status !== 200 && http.status !== 201) {
                                 Api.setErrorPayload({
                                     'output': {
@@ -210,13 +194,12 @@
                                 });
                             }
                         };
-                        //var  jsonObj={claimNumber: _claimNumber};
                         var jsonObj = {
-                            TargetObjectStore: process.env.TARGET_OBJECT_STORE,
-                            CaseType: process.env.CASE_TYPE,
+                            TargetObjectStore:'tos',
+                            CaseType:'DM_Demo_CT',
                             Properties: [{
-                                SymbolicName: process.env.SYMBOLIC_NAME,
-                                Value: _claimNumber
+                                SymbolicName:'DM_ClaimNumber',
+                                Value: claimNumber
                             }]
                         };
                         var params = JSON.stringify(jsonObj);
@@ -289,11 +272,11 @@
                         document.getElementById("uploadButton").addEventListener("click", fileToApp);
                     } else if (responses[0].innerhtml.includes('Please wait your document is being attached to claim number')) {
                         flag = true;
-                        sendMessage(_DocId);
+                        sendMessage(docId);
                     } else if (responses[0].innerhtml.includes("Thanks")) {
                         flag = false;
                         var indexNum = responses[0].innerhtml.indexOf(".");
-                        _claimNumber = responses[0].innerhtml.substring(58, indexNum);
+                        claimNumber = responses[0].innerhtml.substring(58, indexNum);
                     } else {
                         flag = false;
                     }
@@ -307,8 +290,7 @@
                 if (newPayloadObj.context.hasOwnProperty('skills')) {
                     if (newPayloadObj.context.skills['main skill'].hasOwnProperty('user_defined')) {
                         if (newPayloadObj.context.skills['main skill'].user_defined.hasOwnProperty('Claim_Number')) {
-                            _claimNumber = newPayloadObj.context.skills['main skill'].user_defined.Claim_Number
-
+                            claimNumber = newPayloadObj.context.skills['main skill'].user_defined.Claim_Number
                         }
                         if (newPayloadObj.context.skills['main skill'].user_defined.hasOwnProperty('navigation')) {
                             if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Verifying claim number') {
@@ -321,7 +303,7 @@
                                         //flag = true;
                                         //sendMessage(http.responseText);
                                         if (!http.responseText.includes('Error from service')) {
-                                            flag=true;
+                                            flag = true;
                                             sendMessage(http.responseText);
                                         }
                                         let errmsg = http.responseText.split(':')[1];
@@ -346,62 +328,14 @@
                                 };
 
                                 var jsonObj = {
-                                    claimNumber: _claimNumber
+                                    claimNumber: claimNumber
                                 };
 
                                 var paramsJson = JSON.stringify(jsonObj);
                                 http.send(paramsJson);
-                            }else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Case export is in Progress') {
-                                var url = '/api/caseSearch';
-                                var http = new XMLHttpRequest();
-                                http.open('POST', url, true);
-                                http.setRequestHeader('Content-type', 'application/json');
-                                http.onreadystatechange = function() {
-                                    if (http.readyState === XMLHttpRequest.DONE && http.status === 200 && http.responseText) {
-                                        flag = false;
-                                        var caseSearchDiv = document.createElement('div');
-                                        caseSearchDiv.className = 'caseSearch';
-                                        var p = document.createElement('p');
-                                        //var a = document.createElement('a');
-                                       // a.href="/caseSearch";
-                                        p.innerHTML = "click to view case details";
-                                        //p.appendChild(a);
-                                        caseSearchDiv.appendChild(p);
-                                        chatBoxElement.appendChild(caseSearchDiv);
-                                        p.onclick = function() {
-                                                openCase('/search?token='+http.responseText)
-                                            };
-                                            
-                                        function openCase(url) {
-                                            return window.open(url);
-                                        }
-                                        var classe = [(isUser ? 'from-user' : 'from-watson'), 'latest', (isTop ? 'top' : 'sub')];
-
-                                        for (var j = 0; j < classe.length; j++) {
-                                            caseSearchDiv.classList.add(classe[j]);
-                                        }
-                                        caseSearchDiv.classList.add('load');
-                                        setTimeout(function() {
-                                            scrollToChatBottom();
-                                        }, 10);
-                                    } else if (http.readyState === XMLHttpRequest.DONE && http.status !== 200 && http.status !== 201) {
-                                        Api.setErrorPayload({
-                                            'output': {
-                                                'generic': [{
-                                                    'response_type': 'text',
-                                                    'text': 'I\'m having trouble connecting to the server, please refresh the page'
-                                                }],
-                                            }
-                                        });
-                                    }
-                                };
-                                var jsonObj = {
-                                    claimNumber: _claimNumber
-                                };
-                                var params = JSON.stringify(jsonObj);
-                                http.send(params);
-                            }
-                             else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Document Search is in Progress') {
+                            } else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Case export is in Progress') {
+                                search('caseSearch');
+                            } else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Document Search is in Progress') {
                                 var url = '/api/documentSearch';
                                 var http = new XMLHttpRequest();
                                 http.open('POST', url, true);
@@ -457,7 +391,7 @@
                                 };
 
                                 var jsonObj = {
-                                    claimNumber: _claimNumber
+                                    claimNumber: claimNumber
                                 };
                                 var params = JSON.stringify(jsonObj);
                                 http.send(params);
@@ -468,30 +402,79 @@
             }
         }
 
+        function search(searchAction) {
+            var url = '/api/search';
+            var http = new XMLHttpRequest();
+            http.open('POST', url, true);
+            http.setRequestHeader('Content-type', 'application/json');
+            http.onreadystatechange = function() {
+                if (http.readyState === XMLHttpRequest.DONE && http.status === 200 && http.responseText) {
+                    flag = false;
+                    var searchDiv = document.createElement('div');
+                    searchDiv.className = searchAction;
+                    var p = document.createElement('p');
+                    //var a = document.createElement('a');
+                    // a.href="/caseSearch";
+                    p.innerHTML = "click to view case details";
+                    //p.appendChild(a);
+                    searchDiv.appendChild(p);
+                    chatBoxElement.appendChild(searchDiv);
+                    p.onclick = function() {
+                        openCase('/search?token=' + http.responseText)
+                    };
+
+                    function openCase(url) {
+                        return window.open(url);
+                    }
+                    var classe = [(isUser ? 'from-user' : 'from-watson'), 'latest', (isTop ? 'top' : 'sub')];
+
+                    for (var j = 0; j < classe.length; j++) {
+                        searchDiv.classList.add(classe[j]);
+                    }
+                    searchDiv.classList.add('load');
+                    setTimeout(function() {
+                        scrollToChatBottom();
+                    }, 10);
+                } else if (http.readyState === XMLHttpRequest.DONE && http.status !== 200 && http.status !== 201) {
+                    Api.setErrorPayload({
+                        'output': {
+                            'generic': [{
+                                'response_type': 'text',
+                                'text': 'I\'m having trouble connecting to the server, please refresh the page'
+                            }],
+                        }
+                    });
+                }
+            };
+            var jsonObj = {
+                claimNumber: claimNumber,
+                action:searchAction
+            };
+            var params = JSON.stringify(jsonObj);
+            http.send(params);
+
+        }
+
         function fileToApp() {
             var fileLength = document.getElementById('uploadedFile').files.length;
             if (fileLength > 0) {
                 var uploadedFileObj = document.getElementById('uploadedFile').files[0];
                 const formData = new FormData();
                 formData.append('filename', uploadedFileObj);
-                console.log(uploadedFileObj);
                 var jsonObj = {
-                    claimNumber: _claimNumber,
+                    claimNumber: claimNumber,
                     filename: uploadedFileObj
                 };
                 var paramsJson = JSON.stringify(jsonObj);
                 formData.append('claimNumber', paramsJson);
                 var http = new XMLHttpRequest();
                 http.open('POST', '/api/upload', true);
-                //http.setRequestHeader('Content-type', 'multipart/form-data');
-
                 http.onreadystatechange = function() {
                     if ((http.readyState === XMLHttpRequest.DONE || http.readyState === XMLHttpRequest.HEADERS_RECEIVED) && (http.status === 200 || http.status === 201) && http.responseText != 'not selecting files' && http.responseText != '') {
 
                         flag = true;
                         sendMessage("Y");
-                        console.log("conversation is", http.responseText);
-                        _DocId = http.responseText;
+                        docId = http.responseText;
                     } else if (http.readyState === XMLHttpRequest.DONE && (http.status === 200 || http.status === 201) && http.responseText == 'not selecting files' && http.responseText != '') {
                         {
                             Api.setErrorPayload({
