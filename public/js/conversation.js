@@ -284,6 +284,33 @@
                 //till here
             }
         }
+        function  buildSearchResultPage(searchAction,actionToken){
+                    var searchDiv = document.createElement('div');
+                    searchDiv.className = 'caseSearch';
+                    var p = document.createElement('p');
+                    //var a = document.createElement('a');
+                    // a.href="/caseSearch";
+                    p.innerHTML = `click to view ${searchAction} details`;
+                    //p.appendChild(a);
+                    searchDiv.appendChild(p);
+                    chatBoxElement.appendChild(searchDiv);
+                    p.onclick = function() {
+                        openCase('/search?'+searchAction+'='+actionToken);
+                    };
+
+                    function openCase(url) {
+                        return window.open(url);
+                    }
+                    var classe = [(isUser ? 'from-user' : 'from-watson'), 'latest', (isTop ? 'top' : 'sub')];
+
+                    for (var j = 0; j < classe.length; j++) {
+                        searchDiv.classList.add(classe[j]);
+                    }
+                    searchDiv.classList.add('load');
+                    setTimeout(function() {
+                        scrollToChatBottom();
+                    }, 10);
+        }
 
         function getContextVar(newPayloadObj) {
             if (newPayloadObj.hasOwnProperty('context')) {
@@ -333,26 +360,34 @@
 
                                 var paramsJson = JSON.stringify(jsonObj);
                                 http.send(paramsJson);
+
                             } else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Case export is in Progress') {
                                 search('caseSearch');
-                            } else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Document Search is in Progress') {
+                            }else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Case status export is in Progress') {
+                                search('caseStatus');
+                            }else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Case history export is in Progress') {
+                                search('caseHistory');
+                            } 
+                            else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Document Search is in Progress') {
                                 var url = '/api/documentSearch';
+                                var docSearchAction='documentSearch';
                                 var http = new XMLHttpRequest();
                                 http.open('POST', url, true);
                                 http.setRequestHeader('Content-type', 'application/json');
                                 http.onreadystatechange = function() {
-                                    if (http.readyState === XMLHttpRequest.DONE && http.status === 200 && http.responseText) {
-                                        flag = false;
+                                    if (http.readyState === XMLHttpRequest.DONE && http.status === 200 && http.response) {
+                                        flag = false;                                       
                                         var documentSearchDiv = document.createElement('div');
                                         documentSearchDiv.className = 'documentSearch';
                                         documentSearchDiv.setAttribute('id', 'searchDiv');
                                         var searchList = document.createElement('ul');
                                         documentSearchDiv.appendChild(searchList);
                                         searchList.className += 'SearchList';
-
                                         var parsedData = JSON.parse(http.response);
-
-                                        parsedData.map((el) => {
+                                        var parsedBody = JSON.parse(parsedData.body);
+                                        var dataLength = parsedBody.length;
+                                        if(dataLength<=10){
+                                        parsedBody.map((el) => {
                                             var li = document.createElement('li');
                                             li.className += 'documentLi';
                                             li.innerHTML = el.documentName;
@@ -374,10 +409,13 @@
                                             documentSearchDiv.classList.add(classe[j]);
                                         }
                                         documentSearchDiv.classList.add('load');
-                                        setTimeout(function() {
-                                            scrollToChatBottom();
+                                        scrollToChatBottom();
+                                            setTimeout(function() {
                                         }, 10);
-
+                                      }else{
+                                        var encryptedToken=parsedData.encryptedStr;
+                                         buildSearchResultPage(docSearchAction,encryptedToken);
+                                     }
                                     } else if (http.readyState === XMLHttpRequest.DONE && http.status !== 200 && http.status !== 201) {
                                         Api.setErrorPayload({
                                             'output': {
@@ -391,7 +429,8 @@
                                 };
 
                                 var jsonObj = {
-                                    claimNumber: claimNumber
+                                    claimNumber: claimNumber,
+                                    action: docSearchAction
                                 };
                                 var params = JSON.stringify(jsonObj);
                                 http.send(params);
@@ -403,38 +442,14 @@
         }
 
         function search(searchAction) {
-            var url = '/api/search';
             var http = new XMLHttpRequest();
+            var url = '/api/search';
             http.open('POST', url, true);
             http.setRequestHeader('Content-type', 'application/json');
             http.onreadystatechange = function() {
                 if (http.readyState === XMLHttpRequest.DONE && http.status === 200 && http.responseText) {
                     flag = false;
-                    var searchDiv = document.createElement('div');
-                    searchDiv.className = searchAction;
-                    var p = document.createElement('p');
-                    //var a = document.createElement('a');
-                    // a.href="/caseSearch";
-                    p.innerHTML = "click to view case details";
-                    //p.appendChild(a);
-                    searchDiv.appendChild(p);
-                    chatBoxElement.appendChild(searchDiv);
-                    p.onclick = function() {
-                        openCase('/search?token=' + http.responseText)
-                    };
-
-                    function openCase(url) {
-                        return window.open(url);
-                    }
-                    var classe = [(isUser ? 'from-user' : 'from-watson'), 'latest', (isTop ? 'top' : 'sub')];
-
-                    for (var j = 0; j < classe.length; j++) {
-                        searchDiv.classList.add(classe[j]);
-                    }
-                    searchDiv.classList.add('load');
-                    setTimeout(function() {
-                        scrollToChatBottom();
-                    }, 10);
+                    buildSearchResultPage(searchAction,http.responseText);  
                 } else if (http.readyState === XMLHttpRequest.DONE && http.status !== 200 && http.status !== 201) {
                     Api.setErrorPayload({
                         'output': {
