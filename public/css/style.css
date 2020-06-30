@@ -8,7 +8,8 @@
     background-size: cover;
 }
 .url{
-	color:black;
+	color:#007bff;
+	text-decoration: underline;
 }
 .url:hover{
 	color:blue;
