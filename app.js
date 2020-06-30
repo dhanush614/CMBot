@@ -117,13 +117,15 @@
 	var symbolicNames = '';
 	var columnHeaders = '';
 	var searchAction= '';
+	var title='';
 
 	app.post('/api/documentSearch', (req, res) => {
 		var claimNumber = req.body.claimNumber;
 		searchAction = req.body.action;
 		var actionTaken = searchAction.toString().toUpperCase();
 	    symbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
-	    columnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
+		columnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
+		title = process.env.DOCUMENT_SEARCH_TITLE
 	    request.get({
 	        url: process.env.DOCUMENT_SEARCH_API + claimNumber,
 	        headers: {
@@ -148,7 +150,8 @@
 		var actionTaken = searchAction.toString().toUpperCase();
 		console.log(actionTaken);
 	    symbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
-	    columnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
+		columnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
+		title = process.env[`${actionTaken}_TITLE`];
 	    request.post({
 	        url: 'http://localhost:8080/search',
 	        headers: {
@@ -192,7 +195,8 @@
 	    res.render('Search', {
 	        'search': responseData,
 	        'symbolicName': symbolicNames,
-	        'columnHeader': columnHeaders
+			'columnHeader': columnHeaders,
+			'Title':title
 	    });
 	});
 

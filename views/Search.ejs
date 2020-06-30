@@ -13,7 +13,7 @@
     </head>
     <body class="bg">
         <div class="container-fluid p-2">
-            <h1 class="h1 text-center text-light font-italic">Case Search Results</h1>
+            <h1 class="h1 text-center text-light font-italic"><%= Title %> Results</h1>
         </div>
         <div class="container p-2">
             <div class="row">
@@ -30,13 +30,17 @@
                             <% for(var i=0; i < search.length; i++) { %>
                             <tr>                                
                                 <% for(var j=0; j < symbolicName.length; j++) { %>
-                                    <th class="text-center"><%= search[i][symbolicName[j]] %></th>
+                                    <% if (search[i][symbolicName[j]].includes('https://') || search[i][symbolicName[j]].includes('http://')) { %>
+                                        <th class="text-center"><a class='url' id='url' target='_blank' href='<%= search[i][symbolicName[j]] %>'><%= search[i][symbolicName[j]] %></a></th>
+                                    <%} else { %>
+                                        
+                                        <th class="text-center"><%= search[i][symbolicName[j]] %></th>
+                                    <% } %>
                                 <% } %>                               
                             </tr>  
                             <% } %>
                         </tbody>
                     </table>
-                   
                 </div>
             </div>
         </div>
@@ -60,4 +64,14 @@
             </ul>
         </nav>
     </body>
+    <!-- <script>
+            var a = document.getElementById("url");
+            var href = document.getElementById("url").getAttribute("href");
+            a.onclick = function(href){
+                open(href);
+            }
+            function open(url){
+                return window.open(url);
+            }
+    </script> -->
 </html>
