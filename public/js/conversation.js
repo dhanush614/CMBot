@@ -5,6 +5,7 @@
     var chatBoxElement = null;
     var claimNumber = null;
     var docId=null;
+    var envDataJson=null;
     var ConversationPanel = (function() {
         var settings = {
             selectors: {
@@ -29,7 +30,9 @@
         // Initialize the module
         function init() {
             chatUpdateSetup();
-            Api.getSessionId(function() {
+			
+            Api.getSessionId(function(envData) {
+			envDataJson=JSON.parse(envData);
                 Api.sendRequest('', null);
             });
             setupInputBox();
@@ -50,6 +53,8 @@
                 displayMessage(JSON.parse(newPayloadStr).result, settings.authorTypes.watson);
                 getContextVar(JSON.parse(newPayloadStr).result);
             };
+
+			
 
             Api.setErrorPayload = function(newPayload) {
                 displayMessage(newPayload, settings.authorTypes.watson);
@@ -195,10 +200,10 @@
                             }
                         };
                         var jsonObj = {
-                            TargetObjectStore:'tos',
-                            CaseType:'DM_Demo_CT',
+                            TargetObjectStore:envDataJson.TARGET_OBJECT_STORE,
+                            CaseType:envDataJson.CASE_TYPE,
                             Properties: [{
-                                SymbolicName:'DM_ClaimNumber',
+                                SymbolicName:envDataJson.SYMBOLIC_NAME,
                                 Value: claimNumber
                             }]
                         };
@@ -313,6 +318,7 @@
         }
 
         function getContextVar(newPayloadObj) {
+		
             if (newPayloadObj.hasOwnProperty('context')) {
                 if (newPayloadObj.context.hasOwnProperty('skills')) {
                     if (newPayloadObj.context.skills['main skill'].hasOwnProperty('user_defined')) {
@@ -362,11 +368,11 @@
                                 http.send(paramsJson);
 
                             } else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Case export is in Progress') {
-                                search('caseSearch');
+                                search('claimSearch');
                             }else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Case status export is in Progress') {
-                                search('caseStatus');
+                                search('claimStatus');
                             }else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Case history export is in Progress') {
-                                search('caseHistory');
+                                search('claimHistory');
                             } 
                             else if (newPayloadObj.context.skills['main skill'].user_defined.navigation === 'Document Search is in Progress') {
                                 var url = '/api/documentSearch';

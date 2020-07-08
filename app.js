@@ -28,9 +28,21 @@
 	const fs = require('fs');
 	var cors = require('cors');
 	const cryptoRandomString = require('crypto-random-string');
+	
+	const dotenvJSON = require("dotenv-json");
+	dotenvJSON({ path: "./env.json"});
+	var envData = fs.readFileSync("./env.json",{encoding:'utf8'});
+	var parsedEnvData = JSON.parse(envData);
+//	var envData = require("./env.json");
+//	var parsedEnvData = JSON.stringify(envData);
+	console.log(parsedEnvData);
 	var token = "";
 
 	var app = express();
+	const enstr = cryptoRandomString({
+	        length: 36,
+	        type: 'url-safe'
+	    });
 	app.use(cookieParser());
 	const {
 	    IamAuthenticator,
@@ -40,13 +52,9 @@
 	app.all('/', function(req, res, next) {
 	    console.log('Accessing the secret section ...', req.query.authHeader);
 	    token = req.query.authHeader;
-	    res.cookie('authToken', token);
-	    const enstr = cryptoRandomString({
-	        length: 36,
-	        type: 'url-safe'
-	    });
+	    res.cookie('authToken', token);	    
 	    res.cookie(token, enstr);	   
-	    next() // pass control to the next handler
+	    next(); // pass control to the next handler
 
 	})
 
@@ -100,7 +108,8 @@
 	                formData: {
 	                    "uploadFile": fs.createReadStream(filep),
 	                    "claimNumber": claimNumber.claimNumber,
-	                    "fileName": req.file.filename
+	                    "fileName": req.file.filename,
+	           			"propertyData": parsedEnvData
 	                }
 	            };
 	            request(options, function(err, httpResponse, body) {
@@ -113,27 +122,42 @@
 	        }
 	    });
 	});
-	var responseData = '';
-	var symbolicNames = '';
-	var columnHeaders = '';
+	var caseSearchData='';
+	var caseHistoryData='';
+	var caseStatusData='';
+	var documentSearchData='';
+	var searchSymbolicNames = '';
+	var searchColumnHeaders = '';
+	var statusSymbolicNames = '';
+	var statusColumnHeaders = '';
+	var historySymbolicNames = '';
+	var historyColumnHeaders = '';
+	var documentSymbolicNames = '';
+	var documentColumnHeaders = '';
 	var searchAction= '';
-	var title='';
-
+	var caseSearchTitle='';
+	var caseStatusTitle='';
+	var caseHistoryTitle='';
+	var documentSearchTitle='';
+	
 	app.post('/api/documentSearch', (req, res) => {
 		var claimNumber = req.body.claimNumber;
 		searchAction = req.body.action;
 		var actionTaken = searchAction.toString().toUpperCase();
-	    symbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
-		columnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
-		title = process.env.DOCUMENT_SEARCH_TITLE
-	    request.get({
+	    documentSymbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
+		documentColumnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
+		documentSearchTitle = process.env.DOCUMENT_SEARCH_TITLE
+	    request.post({
 	        url: process.env.DOCUMENT_SEARCH_API + claimNumber,
 	        headers: {
 	            'Authorization': req.cookies.authToken
+	        },
+			formData: {
+	           'propertyData': parsedEnvData
 	        }
 	    }, function(error, response, body) {
 	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
-				responseData = JSON.parse(body); 
+				documentSearchData = JSON.parse(body);
 				var tokenUpdated = token.replace('==', '');
 	            var encryptedStr = req.cookies[tokenUpdated];
 				res.send({body,encryptedStr});
@@ -149,9 +173,20 @@
 		searchAction = req.body.action;
 		var actionTaken = searchAction.toString().toUpperCase();
 		console.log(actionTaken);
-	    symbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
-		columnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
-		title = process.env[`${actionTaken}_TITLE`];
+		if(searchAction=='claimSearch'){
+			searchSymbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
+			searchColumnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
+			caseSearchTitle = process.env[`${actionTaken}_TITLE`];		
+		}else if(searchAction=='claimStatus'){
+			statusSymbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
+			statusColumnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
+			caseStatusTitle = process.env[`${actionTaken}_TITLE`];		
+		}else if(searchAction=='claimHistory'){
+			historySymbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
+			historyColumnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
+			caseHistoryTitle = process.env[`${actionTaken}_TITLE`];
+		}
+	    
 	    request.post({
 	        url: 'http://localhost:8080/search',
 	        headers: {
@@ -159,11 +194,18 @@
 			},
 			formData: {	                    
 	                    "claimNumber": claimNumber,
-						"searchAction": actionTaken
-					 }
+						"searchAction": actionTaken,
+	           			"propertyData": parsedEnvData
+	        }
 	    }, function(error, response, body) {
 	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
-	            responseData = JSON.parse(body);
+				if(searchAction=='claimSearch'){
+					caseSearchData = JSON.parse(body);
+				}else if(searchAction=='claimStatus'){
+					caseStatusData = JSON.parse(body);
+				}else if(searchAction=='claimHistory'){
+					caseHistoryData = JSON.parse(body);
+				}
 	            var tokenUpdated = token.replace('==', '');
 	            var encryptedStr = req.cookies[tokenUpdated];
 	            res.send(encryptedStr);
@@ -173,9 +215,11 @@
 	        }
 	    });
 	});
+	var queryKey="";
 	var verifyToken = function(req, res, next) {
 	    var tokenStr = req.cookies.authToken;
-	    var urlToken = req.query[searchAction];
+        queryKey=Object.keys(req.query)[0];
+	    var urlToken = req.query[queryKey];
 	    if (tokenStr == undefined || urlToken == undefined) {
 	        res.status(401).send('Your dont have permissions to access this page');
 	    } else if (tokenStr == null || urlToken == null) {
@@ -192,20 +236,46 @@
 	}
 
 	app.get('/search', verifyToken, (req, res) => {
-	    res.render('Search', {
-	        'search': responseData,
-	        'symbolicName': symbolicNames,
-			'columnHeader': columnHeaders,
-			'Title':title
-	    });
+		if(queryKey=='claimSearch'){
+				 res.render('Search', {
+		        'search': caseSearchData,
+		        'symbolicName': searchSymbolicNames,
+				'columnHeader': searchColumnHeaders,
+				'Title':caseSearchTitle
+		    })
+		}else if(queryKey=='claimStatus'){
+				res.render('Search', {
+		        'search': caseStatusData,
+		        'symbolicName': statusSymbolicNames,
+				'columnHeader': statusColumnHeaders,
+				'Title': caseStatusTitle
+		    });
+		}else if(queryKey=='claimHistory'){
+				 res.render('Search', {
+		        'search': caseHistoryData,
+		        'symbolicName': historySymbolicNames,
+				'columnHeader': historyColumnHeaders,
+				'Title':caseHistoryTitle
+		    });		
+		}else{
+				 res.render('Search', {
+		        'search': documentSearchData,
+		        'symbolicName': documentSymbolicNames,
+				'columnHeader': documentColumnHeaders,
+				'Title': documentSearchTitle
+		    });		
+		}
 	});
 
 	app.post('/api/validateclaim', function(req, res) {
 	    var claimNumber = req.body.claimNumber;
-	    request.get({
+	    request.post({
 	        url: process.env.VALIDATE_CLAIM_API + claimNumber,
 	        headers: {
 	            'Authorization': req.cookies.authToken
+	        },
+			formData: {
+	           'propertyData': parsedEnvData
 	        }
 	    }, function(error, response, body) {
 	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
@@ -219,10 +289,13 @@
 
 	app.post('/api/claimnumber', function(req, res) {
 	    var claimNumber = req.body.claimNumber;
-	    request.get({
+	    request.post({
 	        url: process.env.CREATE_CLAIM_API + claimNumber,
 	        headers: {
 	            'Authorization': req.cookies.authToken
+	        },
+			formData: {
+	           'propertyData': parsedEnvData
 	        }
 	    }, function(error, response, body) {
 
@@ -323,6 +396,7 @@
 			 return res.json(data);
 	    });
 	});
+	parsedEnvData=JSON.stringify(parsedEnvData);
 
 	app.get('/api/session', function(req, res) {
 	    assistant.createSession({
@@ -332,7 +406,7 @@
 	            if (error) {
 	                return res.send(error);
 	            } else {
-	                return res.send(response);
+	                return res.send({response,parsedEnvData});
 	            }
 	        }
 	    );

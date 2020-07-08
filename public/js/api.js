@@ -33,14 +33,27 @@ var Api = (function() {
   };
 
   function getSessionId(callback) {
+//		var button = document.createElement('button');
+//		var maindiv = document.getElementById('top');
+//		button.innerHTML='top';
+//		button.className = 'back-to-top';
+//		button.style.display='inline';
+//	//	button.addEventListener('click',function(){
+//	//		 maindiv.scrollTop = 0;
+//	//	});
+//		$('button').click(function() {
+//	           $(maindiv).scrollTop(0);
+//	       });
+//		maindiv.appendChild(button);
     var http = new XMLHttpRequest();
     http.open('GET', sessionEndpoint, true);
     http.setRequestHeader('Content-type', 'application/json');
     http.onreadystatechange = function () {
       if (http.readyState === XMLHttpRequest.DONE) {
         let res = JSON.parse(http.response);
-        sessionId = res.result.session_id;
-        callback();
+        sessionId = res.response.result.session_id;
+		var envData= res.parsedEnvData;
+        callback(envData);
       }
     };
     http.send();

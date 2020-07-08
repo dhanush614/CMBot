@@ -15,6 +15,27 @@
 	color:blue;
 }
 
+.topbtn{
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 99;
+  border: none;
+  outline: none;
+  background-color: yellow;
+  cursor: pointer;
+  border-radius: 50%;
+  padding:10px;
+  color: black;
+}
+
+.topbtn:focus {outline:0;}
+
+.topbtn:hover {
+  background-color: blue;
+  color: white;
+}
+
 /* Custom Scrollbar using CSS */
 .custom-scrollbar-css {
 	overflow-x: hidden;
@@ -43,10 +64,6 @@
 
 h1, h2, h3, h4, h5, h6 {
 	color: #1e1e1e;
-}
-
-#test{
-	
 }
 
 a {
